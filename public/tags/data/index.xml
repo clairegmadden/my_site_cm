@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>data | Claire Madden</title>
+    <link>/tags/data/</link>
+      <atom:link href="/tags/data/index.xml" rel="self" type="application/rss+xml" />
+    <description>data</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><lastBuildDate>Thu, 09 Jan 2020 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png</url>
+      <title>data</title>
+      <link>/tags/data/</link>
+    </image>
+    
+    <item>
+      <title>Principal Components Analysis</title>
+      <link>/project/pca/</link>
+      <pubDate>Thu, 09 Jan 2020 00:00:00 +0000</pubDate>
+      <guid>/project/pca/</guid>
+      <description>
+
+
+&lt;p&gt;The following is an exploration of global climatactic and environmental factors, and the multivariate relationships between rainfall, temperature, elevation, cloud cover, tree canopy cover and isothermality in countries throughout the world. The dataset used for this analysis, compiled and provided by &lt;span class=&#34;citation&#34;&gt;@zander_venter&lt;/span&gt; on Kaggle, is a compilation of data aquired through Google Earth Engine (&lt;a href=&#34;https://earthengine.google.com/&#34; class=&#34;uri&#34;&gt;https://earthengine.google.com/&lt;/a&gt;). The dataset uses publically available remote sensing data, where most of the data is derived by calculating the mean for each country at a scale of about 10km. A subset of the variables included in this dataset were chosen to demonstrate the relationship of variance between different climatic variables in countries throughout the world. In order to understand the relationship between different gloabl environmental and climatic variables included in the dataset, a principal components analysis is provided below to demonstrate directionality of the greatest source of variance within variables considered.&lt;/p&gt;
+&lt;p&gt;&lt;br&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# explore data
+
+world_env &amp;lt;- read_csv(&amp;quot;world_env_vars.csv&amp;quot;) %&amp;gt;% 
+  clean_names()
+
+summary(world_env) # check out the dataset&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# select variables of interest for principal components analysis
+env_subset &amp;lt;- world_env %&amp;gt;% 
+  select(elevation, tree_canopy_cover, isothermality, rain_mean_annual, temp_mean_annual, cloudiness) 
+
+# explore subset data and understand missingness
+
+VIM::matrixplot(env_subset, sortby = &amp;quot;elevation&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/pca/index_files/figure-html/unnamed-chunk-2-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# can&amp;#39;t see variable all names so not that helpful for exploration
+
+naniar::gg_miss_var(env_subset)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/pca/index_files/figure-html/unnamed-chunk-2-2.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# only a few NAs for each variable in the subset, will remove them
+
+env_nona &amp;lt;- env_subset %&amp;gt;% 
+  drop_na() %&amp;gt;%  # remove NA values
+  rename(&amp;quot;Elevation&amp;quot; = elevation, # change column names so they show up nicely in plot
+         &amp;quot;Tree Cover&amp;quot; = tree_canopy_cover,
+         &amp;quot;Isothermality&amp;quot; = isothermality,
+         &amp;quot;Annual Mean Rainfall&amp;quot; = rain_mean_annual,
+         &amp;quot;Annual Mean Temperature&amp;quot; = temp_mean_annual,
+         &amp;quot;Cloudiness&amp;quot; = cloudiness)
+
+
+env_pca &amp;lt;- prcomp(env_nona, scale = TRUE) # run PCA
+
+biplot(env_pca) # lookin real UGLY! &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/pca/index_files/figure-html/unnamed-chunk-2-3.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# a prettier version...
+my_pca_plot &amp;lt;- autoplot(env_pca,
+                        colour = &amp;quot;black&amp;quot;,
+                        alpha = 0.3,
+                        loadings.colour = &amp;quot;darkgreen&amp;quot;,
+                        loadings.label = TRUE,
+                        loadings.label.size = 3,
+                        loadings.label.colour = &amp;quot;black&amp;quot;,
+                        loadings.label.repel = TRUE,
+                        loadings.label.vjust = 2,
+                        loadings.label.hjust = 1)+
+  theme_bw()
+
+my_pca_plot&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/pca/index_files/figure-html/unnamed-chunk-3-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Figure 2. Principal components analysis showing the relationship between a subset of gloabl climactic variables included in a compilation of Google Earth Engine datasets.&lt;/strong&gt; A subset of variables from the available climactic and environmental data from countries throughout the world was chosen to represent temperature, rainfall, isothermality, cloudiness, elevation, tree cover and the relationships between these variables on a gloabl scale. Principal components 1 and 2 explain ~75% of overall variance in the data. Data source: &lt;span class=&#34;citation&#34;&gt;@zander_venter&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;br&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Takeaways from the principal components analysis:
+&lt;ul&gt;
+&lt;li&gt;Elevation and temperature are negatively correlated&lt;/li&gt;
+&lt;li&gt;Isothermality and temperature are positively correlated&lt;/li&gt;
+&lt;li&gt;Mean annual rain, tree cover, and cloudiness are all positively correlated&lt;/li&gt;
+&lt;li&gt;Mean annual rain, tree cover, and cloudiness are not related to elevation or temperature&lt;/li&gt;
+&lt;li&gt;Principal components 1 and 2 explain ~75% of variance in the data&lt;/li&gt;
+&lt;li&gt;No obvious “clusters” exist within observations contained in the PCA&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;br&gt;&lt;/p&gt;
+&lt;p&gt;Reference: &lt;br&gt; &lt;span class=&#34;citation&#34;&gt;@zander_venter&lt;/span&gt; on Kaggle, data from Google Earth Engine (&lt;a href=&#34;https://earthengine.google.com/&#34; class=&#34;uri&#34;&gt;https://earthengine.google.com/&lt;/a&gt;).&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

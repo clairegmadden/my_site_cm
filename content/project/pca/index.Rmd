@@ -1,0 +1,123 @@
+---
+title: Principal Components Analysis
+author: 'Claire Madden'
+date: '2020-01-09'
+slug: pca
+categories: []
+tags:
+  - data
+subtitle: 'Exploring Global Relationships Between Various Environmental and Climatic Variables to Understand Principal Components'
+summary: 'Principal Components Analysis on Global Environmental and Climactic Variables'
+authors: []
+lastmod: '2020-01-09T15:02:21-08:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+
+# load packages
+library(tidyverse)
+library(kableExtra)
+library(janitor)
+library(lubridate)
+library(tidyr)
+library(ggfortify)
+library(RColorBrewer)
+
+
+```
+
+The following is an exploration of global climatactic and environmental factors, and the multivariate relationships between rainfall, temperature, elevation, cloud cover, tree canopy cover and isothermality in countries throughout the world. The dataset used for this analysis, compiled and provided by @zander_venter on Kaggle, is a compilation of data aquired through Google Earth Engine (https://earthengine.google.com/). The dataset uses publically available remote sensing data, where most of the data is derived by calculating the mean for each country at a scale of about 10km. A subset of the variables included in this dataset were chosen to demonstrate the relationship of variance between different climatic variables in countries throughout the world. In order to understand the relationship between different gloabl environmental and climatic variables included in the dataset, a principal components analysis is provided below to demonstrate directionality of the greatest source of variance within variables considered. 
+
+<br>
+
+
+```{r, results = FALSE}
+# explore data
+
+world_env <- read_csv("world_env_vars.csv") %>% 
+  clean_names()
+
+summary(world_env) # check out the dataset
+
+
+```
+
+
+
+```{r, results = FALSE}
+# select variables of interest for principal components analysis
+env_subset <- world_env %>% 
+  select(elevation, tree_canopy_cover, isothermality, rain_mean_annual, temp_mean_annual, cloudiness) 
+
+# explore subset data and understand missingness
+
+VIM::matrixplot(env_subset, sortby = "elevation")
+# can't see variable all names so not that helpful for exploration
+
+naniar::gg_miss_var(env_subset)
+# only a few NAs for each variable in the subset, will remove them
+
+env_nona <- env_subset %>% 
+  drop_na() %>%  # remove NA values
+  rename("Elevation" = elevation, # change column names so they show up nicely in plot
+         "Tree Cover" = tree_canopy_cover,
+         "Isothermality" = isothermality,
+         "Annual Mean Rainfall" = rain_mean_annual,
+         "Annual Mean Temperature" = temp_mean_annual,
+         "Cloudiness" = cloudiness)
+
+
+env_pca <- prcomp(env_nona, scale = TRUE) # run PCA
+
+biplot(env_pca) # lookin real UGLY! 
+
+
+```
+
+
+
+```{r}
+# a prettier version...
+my_pca_plot <- autoplot(env_pca,
+                        colour = "black",
+                        alpha = 0.3,
+                        loadings.colour = "darkgreen",
+                        loadings.label = TRUE,
+                        loadings.label.size = 3,
+                        loadings.label.colour = "black",
+                        loadings.label.repel = TRUE,
+                        loadings.label.vjust = 2,
+                        loadings.label.hjust = 1)+
+  theme_bw()
+
+my_pca_plot
+
+```
+
+**Figure 2. Principal components analysis showing the relationship between a subset of gloabl climactic variables included in a compilation of Google Earth Engine datasets.** A subset of variables from the available climactic and environmental data from countries throughout the world was chosen to represent temperature, rainfall, isothermality, cloudiness, elevation, tree cover and the relationships between these variables on a gloabl scale. Principal components 1 and 2 explain ~75% of overall variance in the data. Data source: @zander_venter.
+
+<br>
+
+* Takeaways from the principal components analysis:
+    + Elevation and temperature are negatively correlated
+    + Isothermality and temperature are positively correlated
+    + Mean annual rain, tree cover, and cloudiness are all positively correlated
+    + Mean annual rain, tree cover, and cloudiness are not related to elevation or temperature
+    + Principal components 1 and 2 explain ~75% of variance in the data
+    + No obvious "clusters" exist within observations contained in the PCA
+
+<br>
+
+Reference: 
+<br>
+@zander_venter on Kaggle, data from Google Earth Engine (https://earthengine.google.com/). 
