@@ -1,0 +1,392 @@
+---
+title: Population Trend Analysis
+author: 'Claire Madden'
+date: '2020-01-09'
+slug: hares
+categories: []
+tags:
+  - data
+subtitle: 'Evaluating Trends in Snowshoe Hare Populations in the Bonanza Creek Experimental Forest, Alaska'
+summary: 'Population Trend Analysis of Snowshoe Hares in Alaska'
+authors: []
+lastmod: '2020-01-09T15:02:21-08:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+---
+
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
+
+
+<p>Image of a sneaky snowshoe hare in Alaska. Image source: National Parks Service (<a href="https://www.nps.gov/gaar/learn/nature/snowshoe-hare.htm" class="uri">https://www.nps.gov/gaar/learn/nature/snowshoe-hare.htm</a>).</p>
+<p><br></p>
+<p>Snowshoe hares have been identified as a ‘keystone’ prey species in northern boreal forests. This study, conducted in the Bonanza Creek Experimental Forest just east of Fairbanks, Alaska, tracked snowshoe hare populations to generate quantitative data that could be used to better explain and predict vegetation and preditor responses to fluctuations in hare populations. Snowshoe hares are known to experience population fluctuations every 8-11 years. This trend is demonstrated by fluctuations in observation counts during the monitoring period; counts of hare observations declined between 1999 and 2002, and then showed a steady increase from ~2002 to ~2010 (Figure 1, Table 1) (Kielland, Chapin &amp; Ruess, 2017).</p>
+<p><br></p>
+<pre class="r"><code># read in the data 
+hares&lt;- read_csv(&quot;showshoe_lter.csv&quot;) 
+
+hares_mf &lt;- hares %&gt;% 
+  mutate(sex = str_to_lower(sex)) %&gt;% # change all entries in sex column to lower case
+  filter(sex == &quot;m&quot; | sex == &quot;f&quot;) %&gt;% # remove all observations with NA or ? in sex
+  mutate(date = mdy(date)) %&gt;% # change date format
+  mutate(full_date = date) %&gt;% # retain date column
+  separate(date, into = c(&quot;year&quot;, &quot;month&quot;, &quot;day&quot;)) %&gt;% #create new columns with parsed date info
+  mutate(month = as.numeric(month)) %&gt;% 
+  mutate(season = ifelse(month %in% c(1:4, 11, 12), &quot;winter&quot;, &quot;summer&quot;)) %&gt;% # organize months into &quot;summer&quot; and &quot;winter&quot;
+  mutate(year = as.numeric(year))
+  
+# seems like there are a lot more observations in the summer than in the winter so maybe not an interesting thing to use for visualization
+
+# explore graph
+ggplot(data = hares_mf, aes(x = weight, y = hindft))+
+  geom_point()+
+  facet_wrap(~sex)</code></pre>
+<p><img src="/project/hares/index_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<pre class="r"><code># this is not that interesting to me</code></pre>
+<pre class="r"><code># try something else that may be more interesting
+
+hares_hist &lt;- ggplot(data = hares_mf, aes(x = year))+ # plot observation frequency by sex
+  geom_bar(aes(fill = sex), position = &quot;dodge&quot;)+
+  scale_fill_manual(values = c(&quot;peru&quot;, &quot;peachpuff2&quot;), labels = c(&quot;Female&quot;, &quot;Male&quot;))+ # set colors and legend names
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(1998, 2012, 1))+ # scale x axis
+  theme_minimal()+
+  labs(x = &quot;Year of Observation&quot;, # set axes labels
+       y = &quot;Observation Count&quot;)+
+  theme(legend.title = element_blank()) # remove legend title
+
+hares_hist</code></pre>
+<p><img src="/project/hares/index_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p><strong>Figure 1. Snowshoe Hare Monitoring Observations in the Bonanza Creek Experimental Forest Between 1998 - 2012.</strong><br />
+Total number of observations of female and male snowshoe hares are recorded each year during the monitoring period. Snowshoe hare population fluctuations within the experimental area are demonstrated by the frequency of monitoring observations throughout the 15 year study. Data source: Kielland, Chapin &amp; Ruess, 2017.</p>
+<p><br></p>
+<p>Early in the study period (1998 - 2002) observations of males frequently exceeded observations of females, while later in the study period (2003 - 2012) females were observed more frequently than males in every year. Additionally, overall observations declined early in the study period, increased after 2002, and began to decline again in 2010. This may be demonstrative of a larger known pattern of snowshow hare population fluctuations occuring every 8-11 years (Kielland, Chapin &amp; Ruess, 2017).</p>
+<p><br></p>
+<pre class="r"><code># make a summary table for females
+hare_summary_f &lt;- hares_mf %&gt;% 
+  filter(sex == &quot;f&quot;) %&gt;% 
+  drop_na(weight, hindft) %&gt;% # take out an values to be able to calculate mean
+  group_by(year) %&gt;% # organize by year and sex
+  summarize(
+    count = length(sex), # number of observations
+    avg_weight = round(mean(weight), digits = 0))# mean weight
+    
+# make a summary table for males
+hare_summary_m &lt;- hares_mf %&gt;% 
+  filter(sex == &quot;m&quot;) %&gt;% 
+  drop_na(weight, hindft) %&gt;% # take out an values to be able to calculate mean
+  group_by(year) %&gt;% # organize by year and sex
+  summarize(
+    count = length(sex), # number of observations
+    avg_weight = round(mean(weight), digits = 0)) # mean weight
+
+# combine the two tables!
+hare_summary &lt;- merge(hare_summary_f, hare_summary_m, by = &quot;year&quot;)
+
+# format into a single pretty table
+hare_table &lt;- kable(hare_summary, align = &quot;c&quot;, col.names = c(&quot;Year&quot;, &quot;Count&quot;, &quot;Average Weight (g)&quot;, &quot;Count&quot;, &quot;Average Weight (g)&quot;), caption = &quot;Table 1. Sumamry Statistics for Snowshoe Hare Monitoring Observations at Bonanza Creek Experimental Forest Between 1998 - 2012. Annual observation counts and average weight of female and male snowshoe hares are reported for each of the years during the monitoring period.&quot;) %&gt;% 
+  add_header_above(c(&quot; &quot; = 1, &quot;Female&quot; = 2, &quot;Male&quot; = 2)) %&gt;% 
+  kable_styling(bootstrap_options = c(&quot;striped&quot;), full_width = FALSE)
+
+hare_table</code></pre>
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+<span id="tab:unnamed-chunk-3">Table 1: </span>Table 1. Sumamry Statistics for Snowshoe Hare Monitoring Observations at Bonanza Creek Experimental Forest Between 1998 - 2012. Annual observation counts and average weight of female and male snowshoe hares are reported for each of the years during the monitoring period.
+</caption>
+<thead>
+<tr>
+<th style="border-bottom:hidden" colspan="1">
+</th>
+<th style="border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="2">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Female
+</div>
+</th>
+<th style="border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="2">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+Male
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:center;">
+Year
+</th>
+<th style="text-align:center;">
+Count
+</th>
+<th style="text-align:center;">
+Average Weight (g)
+</th>
+<th style="text-align:center;">
+Count
+</th>
+<th style="text-align:center;">
+Average Weight (g)
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">
+1998
+</td>
+<td style="text-align:center;">
+10
+</td>
+<td style="text-align:center;">
+1746
+</td>
+<td style="text-align:center;">
+5
+</td>
+<td style="text-align:center;">
+1678
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+1999
+</td>
+<td style="text-align:center;">
+113
+</td>
+<td style="text-align:center;">
+1335
+</td>
+<td style="text-align:center;">
+136
+</td>
+<td style="text-align:center;">
+1241
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2000
+</td>
+<td style="text-align:center;">
+78
+</td>
+<td style="text-align:center;">
+1517
+</td>
+<td style="text-align:center;">
+47
+</td>
+<td style="text-align:center;">
+1302
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2001
+</td>
+<td style="text-align:center;">
+25
+</td>
+<td style="text-align:center;">
+1482
+</td>
+<td style="text-align:center;">
+27
+</td>
+<td style="text-align:center;">
+1420
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2002
+</td>
+<td style="text-align:center;">
+10
+</td>
+<td style="text-align:center;">
+1014
+</td>
+<td style="text-align:center;">
+17
+</td>
+<td style="text-align:center;">
+1301
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2003
+</td>
+<td style="text-align:center;">
+33
+</td>
+<td style="text-align:center;">
+1206
+</td>
+<td style="text-align:center;">
+23
+</td>
+<td style="text-align:center;">
+1223
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2004
+</td>
+<td style="text-align:center;">
+45
+</td>
+<td style="text-align:center;">
+1536
+</td>
+<td style="text-align:center;">
+29
+</td>
+<td style="text-align:center;">
+1372
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2005
+</td>
+<td style="text-align:center;">
+47
+</td>
+<td style="text-align:center;">
+1162
+</td>
+<td style="text-align:center;">
+36
+</td>
+<td style="text-align:center;">
+1297
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2006
+</td>
+<td style="text-align:center;">
+29
+</td>
+<td style="text-align:center;">
+1283
+</td>
+<td style="text-align:center;">
+15
+</td>
+<td style="text-align:center;">
+1443
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2007
+</td>
+<td style="text-align:center;">
+57
+</td>
+<td style="text-align:center;">
+1412
+</td>
+<td style="text-align:center;">
+25
+</td>
+<td style="text-align:center;">
+1190
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2008
+</td>
+<td style="text-align:center;">
+87
+</td>
+<td style="text-align:center;">
+1331
+</td>
+<td style="text-align:center;">
+76
+</td>
+<td style="text-align:center;">
+1360
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2009
+</td>
+<td style="text-align:center;">
+117
+</td>
+<td style="text-align:center;">
+1281
+</td>
+<td style="text-align:center;">
+100
+</td>
+<td style="text-align:center;">
+1325
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2010
+</td>
+<td style="text-align:center;">
+96
+</td>
+<td style="text-align:center;">
+1299
+</td>
+<td style="text-align:center;">
+43
+</td>
+<td style="text-align:center;">
+1350
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2011
+</td>
+<td style="text-align:center;">
+85
+</td>
+<td style="text-align:center;">
+1339
+</td>
+<td style="text-align:center;">
+43
+</td>
+<td style="text-align:center;">
+1400
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2012
+</td>
+<td style="text-align:center;">
+24
+</td>
+<td style="text-align:center;">
+1291
+</td>
+<td style="text-align:center;">
+21
+</td>
+<td style="text-align:center;">
+1331
+</td>
+</tr>
+</tbody>
+</table>
+<p><br></p>
+<p>Reference:</p>
+<p>Kielland K., F. S. Chapin, R. W. Ruess. 2017. Snowshoe hare physical data in Bonanza Creek Experimental Forest: 1999-Present. Environmental Data Initiative. <a href="https://doi.org/10.6073/pasta/03dce4856d79b91557d8e6ce2cbcdc14" class="uri">https://doi.org/10.6073/pasta/03dce4856d79b91557d8e6ce2cbcdc14</a>.</p>

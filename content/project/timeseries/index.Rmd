@@ -1,0 +1,199 @@
+---
+title: Timeseries Analysis
+author: 'Claire Madden'
+date: '2020-01-09'
+slug: timeseries
+categories: []
+tags:
+  - data
+subtitle: 'Timeseries Analysis of Steelhead Trout Passage at Bonneville Dam on the Columbia River, Oregon from 1939 - 2019'
+summary: 'Timeseries Analysis of Steelhead Trout Passage at Bonneville Dam'
+authors: []
+lastmod: '2020-01-09T15:02:21-08:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      fig.width = 8.5)
+```
+
+### Steelhead Trout at Bonneville Dam
+
+Steelhead trout in the Columbia River Basin are ESA listed threatened species. These fish are especially vulnerable given their migratory behavior. Steelhead spend the majority of their lives in the ocean, but travel upstream in rivers across the west coast to freshwater spawning grounds once a year. Human alterations to natural river systems have impacted the fish population's ability to maintain this migratory behavior, and dams in particular create a significant barrier to fish passage (NOAA Fisheries). The Bonneville Dam, on the Columbia River in Oregon, has been outfitted with a fish ladder in order to facilitate annual fish passage to freshwater spawning grounds. The following is an exploration of fish passage counts at Bonneville Dam between 1939 and 2019. 
+
+
+
+```{r}
+
+# load packages 
+library(tidyverse)
+library(tsibble)
+library(fable)
+library(fabletools)
+library(feasts)
+library(forecast)
+library(janitor)
+library(lubridate)
+library(paletteer)
+
+# read in data
+fish_data <- read_csv("cbr_fish_passage_bonneville_allyrs_steelhead.csv") %>% 
+  clean_names()
+
+# data explorations
+
+#View(fish_data)
+#unique(fish_data$parameter) # only Stlhd contained in the dataset
+#unique(fish_data$datatype) # only Adult Passage recorded
+#class(fish_data$mm_dd) #character format 
+
+```
+
+
+```{r}
+# create a new dataframe with additional date formats
+fish_clean <- fish_data %>% 
+  mutate(date = paste(mm_dd, year, sep = "-")) %>% # combine date info into a single column
+  mutate(ts_date = lubridate::parse_date_time(date, "dmy")) %>% # turn into a recognizable format 
+  mutate(ts_date = as.Date(ts_date)) %>% # change class to date
+  mutate(month_sep = yearmonth(ts_date)) %>% #not sure if i need this step but leaving it in case
+  drop_na(month_sep) %>% # remove na values from month_sep (all are on February 29th which must be considered a 'nonsensical' date in tsibbles brain..?)
+  drop_na(value) # drop na observations in value column
+
+# create another dataframe with parsed date data for use later
+fish_parse <- fish_clean %>% 
+  mutate(new_date = ts_date) %>% # duplicate date column
+  separate(new_date, into = c("year", "month", "day"), sep = "-") %>% #seperate date components
+  mutate(year = as.numeric(year), # make all date components recognized as numeric (not character)
+         month = as.numeric(month),
+         day = as.numeric(day))
+  
+```
+
+
+
+```{r}
+# timeseries plot of original observations (daily data)
+fish_ts_daily <- ggplot(data = fish_clean, aes(x = ts_date, y = value))+
+  geom_line()+
+  theme_bw()+
+  labs(x = "Date",
+       y = "Count of Adult Steelhead Trout \nPassing Bonneville Dam")+
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,35000),
+                     labels = scales::comma)
+
+fish_ts_daily # pretty tough to see any details on this
+
+
+```
+                               
+**Figure 1. Daily Steelhead Trout Passage Counts at Bonneville Dam (1939 - 2019).** Timeseries plot showing daily counts of steelhead trout passing Bonneville Dam between 1939 and 2019. The maximum single day count occured on August 13th 2009 with 34,053 fish recorded. 
+
+
+```{r}
+# check out observations since 2000 to see more detail
+fish_since2000 <- fish_clean %>% 
+  filter(year>=2000) # remove observations made before 2000
+
+# graph that!
+fish_ts_2000 <- ggplot(data = fish_since2000, aes(x = ts_date, y = value))+
+  geom_line()+
+  theme_bw()+
+  labs(x = "Date",
+       y = "Count of Adult Steelhead Trout \nPassing Bonneville Dam")+
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,35000),
+                     labels = scales::comma)
+
+fish_ts_2000 # this one is a lot better for seeing seasonality/yearly peaks
+```
+                                
+**Figure 2. Daily Steelhead Trout Passage Counts at Bonneville Dam (2000 - 2019).** Timeseries plot showing daily counts of steelhead trout passing Bonneville Dam between 2000 and 2019. The annual peaks shown in the timeseries correspond with the spawning season when thousands of steelhead travel up the Columbia River to freshwater spawning grounds. 
+
+
+```{r}
+
+# need to make a monthly summary of values to make a season plot
+
+fish_month <- fish_clean %>% 
+  group_by(month_sep) %>% 
+  summarize(month_agg = sum(value)) %>% 
+  mutate(year_month = tsibble::yearmonth(month_sep),
+         month = month(year_month, label = TRUE),
+         year = year(year_month))
+
+fish_month_ts <- as_tsibble(fish_month, index = year_month) %>% # coerce to tsibble to check gg_subseries etc
+  tsibble::fill_gaps() # this step is required in order to run gg_subseries
+
+fish_month_ts %>% autoplot(month_agg) # hard to tell this from the daily timeseries
+fish_month_ts %>% gg_subseries(month_agg) # subseries looks as i would expect!
+#fish_month_ts %>% gg_season(month_agg) # gg_season still not working
+
+# plot monthly total timeseries
+month_season_plot <- ggplot(data = fish_month, aes(x = month, y = month_agg, group = year)) +
+  geom_line(aes(color = year))+
+  scale_color_paletteer_c("ggthemes::Orange-Blue Diverging")+
+  theme_bw()+
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,400000),
+                     labels = scales::comma)+
+  labs(x = "Month",
+       y = "Monthly Total Steelhead Passage \n at Bonneville Dam",
+       color = "Observation Year")
+  
+month_season_plot
+
+
+```
+                             
+**Figure 3. Monthly Total Steelhead Trout Passage Counts at Bonneville Dam (1939 - 2019).** This season plot displays the total monthly counts of steelhead trout passing Bonneville Dam for every year between 1939 and 2019. Each line represents a single year contained within the dataset, with warm colors representing earlier years in the period of record and cool colors representing more recent years in the period of record. The color gradient displays an increasing trend in monthly total steelhead counts in recent years (blue lines). 
+
+
+```{r}
+# annual passages
+
+fish_year <- fish_clean %>% 
+  group_by(year) %>% # organize by year
+  summarize(annual_agg = sum(value)) %>% # make annual totals column
+  mutate(year = year) # keep a column with year
+
+# graph it!
+fish_year_ts <- ggplot(data = fish_year, aes(x = year, y = annual_agg)) +
+  geom_line()+
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0, 650000),
+                     breaks = seq(0, 650000, 100000),
+                     labels = scales::comma)+
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(1940, 2025, 10))+
+  labs(x = "Year",
+       y = "Count of Total Annual Steelhead Trout\n Passing Bonneville Dam")+
+  theme_bw()
+
+
+
+fish_year_ts
+
+```
+                               
+**Figure 4. Annual Steelhead Trout Passage Counts at Bonneville Dam (1939 - 2019).** Timeseries plot showing total annual counts of steelhead trout passing Bonneville Dam between 1939 and 2019. This timeseries confirms the trend in Figure 3, indicating that total counts of steelhead passing the dam have an increasing trend in recent years. 
+
+<br>
+<br>
+
+References:
+
+NOAA Fisheries. (n.d.) Species Directory: Steelhead Trout. Accessed 2/19/20 from: https://www.fisheries.noaa.gov/species/steelhead-trout#overview
+
+Columbia River DART, Columbia Basin Research, University of Washington. (2019). Adult Passage Graphics & Text. Available from http://www.cbr.washington.edu/dart/query/adult_graph_text
+
+

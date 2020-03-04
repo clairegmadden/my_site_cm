@@ -1,0 +1,150 @@
+---
+title: Spatial Analysis
+author: 'Claire Madden'
+date: '2020-01-09'
+slug: hawaii
+categories: []
+tags:
+  - spatial
+subtitle: 'Investigating Spatial Patterns in Landuse and Watersheds in Kauai, Hawaii'
+summary: 'Hawaiian Watershed and Landuse Maps '
+authors: []
+lastmod: '2020-01-09T15:02:21-08:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+---
+
+### Land Use and Watersheds in Hawaii
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+
+```{r}
+# load packages
+library(tidyverse)
+library(sf)
+library(tmap)
+library(mapview)
+library(here)
+library(dplyr)
+library(paletteer)
+library(RColorBrewer)
+library(ggspatial)
+library(janitor)
+
+# read in data
+watersheds <- read_sf("Watersheds.shp") %>% 
+  clean_names() %>% 
+  st_transform(crs = 4326) # set crs
+
+landuse <- read_sf("Land_Use_Land_Cover_LULC.shp") %>% 
+  st_transform(crs = 4326) %>% # set crs
+  mutate(landcover_rename = case_when(landcover == "Cropland and Pasture" ~ "Agriculture", #regroup land use types into fewer, broader categories
+                                      landcover == "Commercial and Services" ~ "Industry", 
+                                      landcover == "Residential" ~ "Urban", 
+                                      landcover == "Evergreen Forest Land" ~ "Undeveloped", 
+                                      landcover == "Other Urban or Built-up Land" ~ "Urban",
+                                      landcover == "Mixed Rangeland" ~ "Agriculture",
+                                      landcover == "Industrial" ~ "Industry",
+                                      landcover == "Streams and Canals" ~ "Water", 
+                                      landcover == "Orchards, Groves, Vineyards, Nurseries and Ornamental Horticultural Areas" ~ "Agriculture",
+                                      landcover == "Shrub and Brush Rangeland" ~ "Agriculture",
+                                      landcover == "Forested Wetland" ~ "Undeveloped",
+                                      landcover == "Reservoirs" ~ "Water",
+                                      landcover == "Nonforested Wetland" ~ "Undeveloped",
+                                      landcover == "Bare Exposed Rock" ~ "Undeveloped",
+                                      landcover == "Sandy Areas Other than Beaches" ~ "Undeveloped",
+                                      landcover == "Transportation, Communications and Utilities" ~ "Industry",
+                                      landcover == "Herbaceous Rangeland" ~ "Agriculture",
+                                      landcover == "Beaches" ~ "Undeveloped",
+                                      landcover == "Other Agricultural Land" ~ "Agriculture",
+                                      landcover == "Lakes" ~ "Water",
+                                      landcover == "Strip Mines, Quarries, and Gravel Pits" ~ "Industry",
+                                      landcover == "Mixed Barren Land" ~ "Undeveloped",
+                                      landcover == "Bays and Estuaries" ~ "Water",
+                                      landcover == "Mixed Urban or Built-up Land" ~ "Urban",
+                                      landcover == "Transitional Areas" ~ "Unknown",
+                                      landcover == "0" ~ "Unknown",
+                                      landcover == "Industrial and Commercial Complexes" ~ "Industry",
+                                      landcover == "Confined Feeding Operations" ~ "Agriculture"))
+  
+
+
+
+
+
+```
+
+
+```{r}
+# map landuse in Hawaii to figure out where I want to zoom in
+hi_map <- ggplot()+
+  geom_sf(data = landuse)
+
+hi_map
+
+```
+
+
+
+```{r}
+# zoom in on Kauai and map land use types
+kauai_landuse <- ggplot() + 
+  geom_sf(data = landuse, aes(fill = landcover_rename), color = NA) + 
+  scale_fill_manual(values = c("peru", "indianred4", "darkolivegreen", "grey65", "plum", "cadetblue4"))+
+  coord_sf(xlim = c(-159.2, -159.9), ylim = c(21.8, 22.3), expand = FALSE)+
+  theme_minimal()+
+  labs(fill = "Landcover Type",
+       x = "Longitude",
+       y = "Latitude",
+       title = "Simplified Land Use Types in Kauai, Hawaii")+
+  annotation_scale(location = "bl", width_hint = 0.5) +
+  annotation_north_arrow(location = "bl", which_north = "true", 
+        pad_x = unit(0.5, "in"), pad_y = unit(0.5, "in"),
+        style = north_arrow_fancy_orienteering)
+
+
+kauai_landuse
+
+```
+
+
+```{r}
+# now make an interactive map with watersheds in Hawaii!
+
+tmap_mode("view") # set mode to interactive
+
+watersheds_new <- watersheds %>%
+  select(wuname, huc) #keep only a few columns with interesting info, area calculations are inaccurate so they get nixed
+
+watershed_tmap <- tm_basemap("Esri.WorldImagery")+
+  tm_shape(watersheds_new)+ #tell map what data to use
+  tm_polygons(col = "lightgrey",
+              alpha = 0.01,
+              border.col = "white",
+              border.alpha = 0.3)+
+  tm_layout(title = "Watersheds in Hawaii")
+  
+  
+watershed_tmap
+
+
+```
+
+
+
+<br>
+<br>
+Data Sources:
+<br>
+Land use/land cover data: http://geoportal.hawaii.gov/datasets/land-use-land-cover-lulc
+<br>
+Watershed data: http://geoportal.hawaii.gov/datasets/watersheds

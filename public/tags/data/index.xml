@@ -13,6 +13,387 @@
     </image>
     
     <item>
+      <title>Population Trend Analysis</title>
+      <link>/project/hares/</link>
+      <pubDate>Thu, 09 Jan 2020 00:00:00 +0000</pubDate>
+      <guid>/project/hares/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/kePrint/kePrint.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;p&gt;Image of a sneaky snowshoe hare in Alaska. Image source: National Parks Service (&lt;a href=&#34;https://www.nps.gov/gaar/learn/nature/snowshoe-hare.htm&#34; class=&#34;uri&#34;&gt;https://www.nps.gov/gaar/learn/nature/snowshoe-hare.htm&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;&lt;br&gt;&lt;/p&gt;
+&lt;p&gt;Snowshoe hares have been identified as a ‘keystone’ prey species in northern boreal forests. This study, conducted in the Bonanza Creek Experimental Forest just east of Fairbanks, Alaska, tracked snowshoe hare populations to generate quantitative data that could be used to better explain and predict vegetation and preditor responses to fluctuations in hare populations. Snowshoe hares are known to experience population fluctuations every 8-11 years. This trend is demonstrated by fluctuations in observation counts during the monitoring period; counts of hare observations declined between 1999 and 2002, and then showed a steady increase from ~2002 to ~2010 (Figure 1, Table 1) (Kielland, Chapin &amp;amp; Ruess, 2017).&lt;/p&gt;
+&lt;p&gt;&lt;br&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# read in the data 
+hares&amp;lt;- read_csv(&amp;quot;showshoe_lter.csv&amp;quot;) 
+
+hares_mf &amp;lt;- hares %&amp;gt;% 
+  mutate(sex = str_to_lower(sex)) %&amp;gt;% # change all entries in sex column to lower case
+  filter(sex == &amp;quot;m&amp;quot; | sex == &amp;quot;f&amp;quot;) %&amp;gt;% # remove all observations with NA or ? in sex
+  mutate(date = mdy(date)) %&amp;gt;% # change date format
+  mutate(full_date = date) %&amp;gt;% # retain date column
+  separate(date, into = c(&amp;quot;year&amp;quot;, &amp;quot;month&amp;quot;, &amp;quot;day&amp;quot;)) %&amp;gt;% #create new columns with parsed date info
+  mutate(month = as.numeric(month)) %&amp;gt;% 
+  mutate(season = ifelse(month %in% c(1:4, 11, 12), &amp;quot;winter&amp;quot;, &amp;quot;summer&amp;quot;)) %&amp;gt;% # organize months into &amp;quot;summer&amp;quot; and &amp;quot;winter&amp;quot;
+  mutate(year = as.numeric(year))
+  
+# seems like there are a lot more observations in the summer than in the winter so maybe not an interesting thing to use for visualization
+
+# explore graph
+ggplot(data = hares_mf, aes(x = weight, y = hindft))+
+  geom_point()+
+  facet_wrap(~sex)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/hares/index_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# this is not that interesting to me&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# try something else that may be more interesting
+
+hares_hist &amp;lt;- ggplot(data = hares_mf, aes(x = year))+ # plot observation frequency by sex
+  geom_bar(aes(fill = sex), position = &amp;quot;dodge&amp;quot;)+
+  scale_fill_manual(values = c(&amp;quot;peru&amp;quot;, &amp;quot;peachpuff2&amp;quot;), labels = c(&amp;quot;Female&amp;quot;, &amp;quot;Male&amp;quot;))+ # set colors and legend names
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(1998, 2012, 1))+ # scale x axis
+  theme_minimal()+
+  labs(x = &amp;quot;Year of Observation&amp;quot;, # set axes labels
+       y = &amp;quot;Observation Count&amp;quot;)+
+  theme(legend.title = element_blank()) # remove legend title
+
+hares_hist&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/hares/index_files/figure-html/unnamed-chunk-2-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Figure 1. Snowshoe Hare Monitoring Observations in the Bonanza Creek Experimental Forest Between 1998 - 2012.&lt;/strong&gt;&lt;br /&gt;
+Total number of observations of female and male snowshoe hares are recorded each year during the monitoring period. Snowshoe hare population fluctuations within the experimental area are demonstrated by the frequency of monitoring observations throughout the 15 year study. Data source: Kielland, Chapin &amp;amp; Ruess, 2017.&lt;/p&gt;
+&lt;p&gt;&lt;br&gt;&lt;/p&gt;
+&lt;p&gt;Early in the study period (1998 - 2002) observations of males frequently exceeded observations of females, while later in the study period (2003 - 2012) females were observed more frequently than males in every year. Additionally, overall observations declined early in the study period, increased after 2002, and began to decline again in 2010. This may be demonstrative of a larger known pattern of snowshow hare population fluctuations occuring every 8-11 years (Kielland, Chapin &amp;amp; Ruess, 2017).&lt;/p&gt;
+&lt;p&gt;&lt;br&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# make a summary table for females
+hare_summary_f &amp;lt;- hares_mf %&amp;gt;% 
+  filter(sex == &amp;quot;f&amp;quot;) %&amp;gt;% 
+  drop_na(weight, hindft) %&amp;gt;% # take out an values to be able to calculate mean
+  group_by(year) %&amp;gt;% # organize by year and sex
+  summarize(
+    count = length(sex), # number of observations
+    avg_weight = round(mean(weight), digits = 0))# mean weight
+    
+# make a summary table for males
+hare_summary_m &amp;lt;- hares_mf %&amp;gt;% 
+  filter(sex == &amp;quot;m&amp;quot;) %&amp;gt;% 
+  drop_na(weight, hindft) %&amp;gt;% # take out an values to be able to calculate mean
+  group_by(year) %&amp;gt;% # organize by year and sex
+  summarize(
+    count = length(sex), # number of observations
+    avg_weight = round(mean(weight), digits = 0)) # mean weight
+
+# combine the two tables!
+hare_summary &amp;lt;- merge(hare_summary_f, hare_summary_m, by = &amp;quot;year&amp;quot;)
+
+# format into a single pretty table
+hare_table &amp;lt;- kable(hare_summary, align = &amp;quot;c&amp;quot;, col.names = c(&amp;quot;Year&amp;quot;, &amp;quot;Count&amp;quot;, &amp;quot;Average Weight (g)&amp;quot;, &amp;quot;Count&amp;quot;, &amp;quot;Average Weight (g)&amp;quot;), caption = &amp;quot;Table 1. Sumamry Statistics for Snowshoe Hare Monitoring Observations at Bonanza Creek Experimental Forest Between 1998 - 2012. Annual observation counts and average weight of female and male snowshoe hares are reported for each of the years during the monitoring period.&amp;quot;) %&amp;gt;% 
+  add_header_above(c(&amp;quot; &amp;quot; = 1, &amp;quot;Female&amp;quot; = 2, &amp;quot;Male&amp;quot; = 2)) %&amp;gt;% 
+  kable_styling(bootstrap_options = c(&amp;quot;striped&amp;quot;), full_width = FALSE)
+
+hare_table&lt;/code&gt;&lt;/pre&gt;
+&lt;table class=&#34;table table-striped&#34; style=&#34;width: auto !important; margin-left: auto; margin-right: auto;&#34;&gt;
+&lt;caption&gt;
+&lt;span id=&#34;tab:unnamed-chunk-3&#34;&gt;Table 1: &lt;/span&gt;Table 1. Sumamry Statistics for Snowshoe Hare Monitoring Observations at Bonanza Creek Experimental Forest Between 1998 - 2012. Annual observation counts and average weight of female and male snowshoe hares are reported for each of the years during the monitoring period.
+&lt;/caption&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;border-bottom:hidden&#34; colspan=&#34;1&#34;&gt;
+&lt;/th&gt;
+&lt;th style=&#34;border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; &#34; colspan=&#34;2&#34;&gt;
+&lt;div style=&#34;border-bottom: 1px solid #ddd; padding-bottom: 5px; &#34;&gt;
+Female
+&lt;/div&gt;
+&lt;/th&gt;
+&lt;th style=&#34;border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; &#34; colspan=&#34;2&#34;&gt;
+&lt;div style=&#34;border-bottom: 1px solid #ddd; padding-bottom: 5px; &#34;&gt;
+Male
+&lt;/div&gt;
+&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center;&#34;&gt;
+Year
+&lt;/th&gt;
+&lt;th style=&#34;text-align:center;&#34;&gt;
+Count
+&lt;/th&gt;
+&lt;th style=&#34;text-align:center;&#34;&gt;
+Average Weight (g)
+&lt;/th&gt;
+&lt;th style=&#34;text-align:center;&#34;&gt;
+Count
+&lt;/th&gt;
+&lt;th style=&#34;text-align:center;&#34;&gt;
+Average Weight (g)
+&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1998
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+10
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1746
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+5
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1678
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1999
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+113
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1335
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+136
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1241
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2000
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+78
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1517
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+47
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1302
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2001
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+25
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1482
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+27
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1420
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2002
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+10
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1014
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+17
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1301
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2003
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+33
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1206
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+23
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1223
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2004
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+45
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1536
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+29
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1372
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2005
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+47
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1162
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+36
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1297
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2006
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+29
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1283
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+15
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1443
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2007
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+57
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1412
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+25
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1190
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2008
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+87
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1331
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+76
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1360
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2009
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+117
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1281
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+100
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1325
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2010
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+96
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1299
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+43
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1350
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2011
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+85
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1339
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+43
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1400
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+2012
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+24
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1291
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+21
+&lt;/td&gt;
+&lt;td style=&#34;text-align:center;&#34;&gt;
+1331
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;br&gt;&lt;/p&gt;
+&lt;p&gt;Reference:&lt;/p&gt;
+&lt;p&gt;Kielland K., F. S. Chapin, R. W. Ruess. 2017. Snowshoe hare physical data in Bonanza Creek Experimental Forest: 1999-Present. Environmental Data Initiative. &lt;a href=&#34;https://doi.org/10.6073/pasta/03dce4856d79b91557d8e6ce2cbcdc14&#34; class=&#34;uri&#34;&gt;https://doi.org/10.6073/pasta/03dce4856d79b91557d8e6ce2cbcdc14&lt;/a&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Principal Components Analysis</title>
       <link>/project/pca/</link>
       <pubDate>Thu, 09 Jan 2020 00:00:00 +0000</pubDate>
@@ -86,6 +467,150 @@ my_pca_plot&lt;/code&gt;&lt;/pre&gt;
 &lt;/ul&gt;
 &lt;p&gt;&lt;br&gt;&lt;/p&gt;
 &lt;p&gt;Reference: &lt;br&gt; &lt;span class=&#34;citation&#34;&gt;@zander_venter&lt;/span&gt; on Kaggle, data from Google Earth Engine (&lt;a href=&#34;https://earthengine.google.com/&#34; class=&#34;uri&#34;&gt;https://earthengine.google.com/&lt;/a&gt;).&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Timeseries Analysis</title>
+      <link>/project/timeseries/</link>
+      <pubDate>Thu, 09 Jan 2020 00:00:00 +0000</pubDate>
+      <guid>/project/timeseries/</guid>
+      <description>
+
+
+&lt;div id=&#34;steelhead-trout-at-bonneville-dam&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Steelhead Trout at Bonneville Dam&lt;/h3&gt;
+&lt;p&gt;Steelhead trout in the Columbia River Basin are ESA listed threatened species. These fish are especially vulnerable given their migratory behavior. Steelhead spend the majority of their lives in the ocean, but travel upstream in rivers across the west coast to freshwater spawning grounds once a year. Human alterations to natural river systems have impacted the fish population’s ability to maintain this migratory behavior, and dams in particular create a significant barrier to fish passage (NOAA Fisheries). The Bonneville Dam, on the Columbia River in Oregon, has been outfitted with a fish ladder in order to facilitate annual fish passage to freshwater spawning grounds. The following is an exploration of fish passage counts at Bonneville Dam between 1939 and 2019.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# load packages 
+library(tidyverse)
+library(tsibble)
+library(fable)
+library(fabletools)
+library(feasts)
+library(forecast)
+library(janitor)
+library(lubridate)
+library(paletteer)
+
+# read in data
+fish_data &amp;lt;- read_csv(&amp;quot;cbr_fish_passage_bonneville_allyrs_steelhead.csv&amp;quot;) %&amp;gt;% 
+  clean_names()
+
+# data explorations
+
+#View(fish_data)
+#unique(fish_data$parameter) # only Stlhd contained in the dataset
+#unique(fish_data$datatype) # only Adult Passage recorded
+#class(fish_data$mm_dd) #character format &lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# create a new dataframe with additional date formats
+fish_clean &amp;lt;- fish_data %&amp;gt;% 
+  mutate(date = paste(mm_dd, year, sep = &amp;quot;-&amp;quot;)) %&amp;gt;% # combine date info into a single column
+  mutate(ts_date = lubridate::parse_date_time(date, &amp;quot;dmy&amp;quot;)) %&amp;gt;% # turn into a recognizable format 
+  mutate(ts_date = as.Date(ts_date)) %&amp;gt;% # change class to date
+  mutate(month_sep = yearmonth(ts_date)) %&amp;gt;% #not sure if i need this step but leaving it in case
+  drop_na(month_sep) %&amp;gt;% # remove na values from month_sep (all are on February 29th which must be considered a &amp;#39;nonsensical&amp;#39; date in tsibbles brain..?)
+  drop_na(value) # drop na observations in value column
+
+# create another dataframe with parsed date data for use later
+fish_parse &amp;lt;- fish_clean %&amp;gt;% 
+  mutate(new_date = ts_date) %&amp;gt;% # duplicate date column
+  separate(new_date, into = c(&amp;quot;year&amp;quot;, &amp;quot;month&amp;quot;, &amp;quot;day&amp;quot;), sep = &amp;quot;-&amp;quot;) %&amp;gt;% #seperate date components
+  mutate(year = as.numeric(year), # make all date components recognized as numeric (not character)
+         month = as.numeric(month),
+         day = as.numeric(day))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# timeseries plot of original observations (daily data)
+fish_ts_daily &amp;lt;- ggplot(data = fish_clean, aes(x = ts_date, y = value))+
+  geom_line()+
+  theme_bw()+
+  labs(x = &amp;quot;Date&amp;quot;,
+       y = &amp;quot;Count of Adult Steelhead Trout \nPassing Bonneville Dam&amp;quot;)+
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,35000),
+                     labels = scales::comma)
+
+fish_ts_daily # pretty tough to see any details on this&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/timeseries/index_files/figure-html/unnamed-chunk-3-1.png&#34; width=&#34;816&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Figure 1. Daily Steelhead Trout Passage Counts at Bonneville Dam (1939 - 2019).&lt;/strong&gt; Timeseries plot showing daily counts of steelhead trout passing Bonneville Dam between 1939 and 2019. The maximum single day count occured on August 13th 2009 with 34,053 fish recorded.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# check out observations since 2000 to see more detail
+fish_since2000 &amp;lt;- fish_clean %&amp;gt;% 
+  filter(year&amp;gt;=2000) # remove observations made before 2000
+
+# graph that!
+fish_ts_2000 &amp;lt;- ggplot(data = fish_since2000, aes(x = ts_date, y = value))+
+  geom_line()+
+  theme_bw()+
+  labs(x = &amp;quot;Date&amp;quot;,
+       y = &amp;quot;Count of Adult Steelhead Trout \nPassing Bonneville Dam&amp;quot;)+
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,35000),
+                     labels = scales::comma)
+
+fish_ts_2000 # this one is a lot better for seeing seasonality/yearly peaks&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/timeseries/index_files/figure-html/unnamed-chunk-4-1.png&#34; width=&#34;816&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Figure 2. Daily Steelhead Trout Passage Counts at Bonneville Dam (2000 - 2019).&lt;/strong&gt; Timeseries plot showing daily counts of steelhead trout passing Bonneville Dam between 2000 and 2019. The annual peaks shown in the timeseries correspond with the spawning season when thousands of steelhead travel up the Columbia River to freshwater spawning grounds.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# need to make a monthly summary of values to make a season plot
+
+fish_month &amp;lt;- fish_clean %&amp;gt;% 
+  group_by(month_sep) %&amp;gt;% 
+  summarize(month_agg = sum(value)) %&amp;gt;% 
+  mutate(year_month = tsibble::yearmonth(month_sep),
+         month = month(year_month, label = TRUE),
+         year = year(year_month))
+
+fish_month_ts &amp;lt;- as_tsibble(fish_month, index = year_month) %&amp;gt;% # coerce to tsibble to check gg_subseries etc
+  tsibble::fill_gaps() # this step is required in order to run gg_subseries
+
+fish_month_ts %&amp;gt;% autoplot(month_agg) # hard to tell this from the daily timeseries&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/timeseries/index_files/figure-html/unnamed-chunk-5-1.png&#34; width=&#34;816&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;fish_month_ts %&amp;gt;% gg_subseries(month_agg) # subseries looks as i would expect!&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/timeseries/index_files/figure-html/unnamed-chunk-5-2.png&#34; width=&#34;816&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#fish_month_ts %&amp;gt;% gg_season(month_agg) # gg_season still not working
+
+# plot monthly total timeseries
+month_season_plot &amp;lt;- ggplot(data = fish_month, aes(x = month, y = month_agg, group = year)) +
+  geom_line(aes(color = year))+
+  scale_color_paletteer_c(&amp;quot;ggthemes::Orange-Blue Diverging&amp;quot;)+
+  theme_bw()+
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,400000),
+                     labels = scales::comma)+
+  labs(x = &amp;quot;Month&amp;quot;,
+       y = &amp;quot;Monthly Total Steelhead Passage \n at Bonneville Dam&amp;quot;,
+       color = &amp;quot;Observation Year&amp;quot;)
+  
+month_season_plot&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/timeseries/index_files/figure-html/unnamed-chunk-5-3.png&#34; width=&#34;816&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Figure 3. Monthly Total Steelhead Trout Passage Counts at Bonneville Dam (1939 - 2019).&lt;/strong&gt; This season plot displays the total monthly counts of steelhead trout passing Bonneville Dam for every year between 1939 and 2019. Each line represents a single year contained within the dataset, with warm colors representing earlier years in the period of record and cool colors representing more recent years in the period of record. The color gradient displays an increasing trend in monthly total steelhead counts in recent years (blue lines).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# annual passages
+
+fish_year &amp;lt;- fish_clean %&amp;gt;% 
+  group_by(year) %&amp;gt;% # organize by year
+  summarize(annual_agg = sum(value)) %&amp;gt;% # make annual totals column
+  mutate(year = year) # keep a column with year
+
+# graph it!
+fish_year_ts &amp;lt;- ggplot(data = fish_year, aes(x = year, y = annual_agg)) +
+  geom_line()+
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0, 650000),
+                     breaks = seq(0, 650000, 100000),
+                     labels = scales::comma)+
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(1940, 2025, 10))+
+  labs(x = &amp;quot;Year&amp;quot;,
+       y = &amp;quot;Count of Total Annual Steelhead Trout\n Passing Bonneville Dam&amp;quot;)+
+  theme_bw()
+
+
+
+fish_year_ts&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/project/timeseries/index_files/figure-html/unnamed-chunk-6-1.png&#34; width=&#34;816&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Figure 4. Annual Steelhead Trout Passage Counts at Bonneville Dam (1939 - 2019).&lt;/strong&gt; Timeseries plot showing total annual counts of steelhead trout passing Bonneville Dam between 1939 and 2019. This timeseries confirms the trend in Figure 3, indicating that total counts of steelhead passing the dam have an increasing trend in recent years.&lt;/p&gt;
+&lt;p&gt;&lt;br&gt; &lt;br&gt;&lt;/p&gt;
+&lt;p&gt;References:&lt;/p&gt;
+&lt;p&gt;NOAA Fisheries. (n.d.) Species Directory: Steelhead Trout. Accessed 2/19/20 from: &lt;a href=&#34;https://www.fisheries.noaa.gov/species/steelhead-trout#overview&#34; class=&#34;uri&#34;&gt;https://www.fisheries.noaa.gov/species/steelhead-trout#overview&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Columbia River DART, Columbia Basin Research, University of Washington. (2019). Adult Passage Graphics &amp;amp; Text. Available from &lt;a href=&#34;http://www.cbr.washington.edu/dart/query/adult_graph_text&#34; class=&#34;uri&#34;&gt;http://www.cbr.washington.edu/dart/query/adult_graph_text&lt;/a&gt;&lt;/p&gt;
+&lt;/div&gt;
 </description>
     </item>
     
