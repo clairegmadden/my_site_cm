@@ -118,9 +118,9 @@ kauai_landuse
 
 
 ```{r}
-# now make an interactive map with watersheds in Hawaii!
+# now make a map with watersheds in Hawaii!
 
-tmap_mode("view") # set mode to interactive
+tmap_mode("view") #set to interactive viewing mode
 
 watersheds_new <- watersheds %>%
   select(wuname, huc) #keep only a few columns with interesting info, area calculations are inaccurate so they get nixed
@@ -136,6 +136,7 @@ watershed_tmap <- tm_basemap("Esri.WorldImagery")+
   
 watershed_tmap
 
+# not displaying in blogdown project, need to troubleshoot or switch to another map format
 
 ```
 
