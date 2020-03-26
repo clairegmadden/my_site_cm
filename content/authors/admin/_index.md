@@ -19,7 +19,7 @@ name: Claire Madden
 organizations:
 - name: The Bren School of Environmental Science & Management at The University of California, Santa Barbara
   url: http://bren.ucsb.edu/
-role: Master's Student <br> Sustainable Water Markets Fellow
+role: Master's Candidate <br> Sustainable Water Markets Fellow
 social:
 - icon: envelope
   icon_pack: fas
@@ -39,6 +39,6 @@ user_groups:
 - Visitors
 ---
 
-Claire Madden is a second year masters' student at The Bren School of Environmental Science & Management specilizing in freshwater resource management and environmental data science. Currently, Claire's work focuses on sustainable groundwater management, particularly in the Central Valley of California in the context of the Sustainable Groundwater Management Act (2014). Claire has spent the last year working on building a decision support tool to help groundwater managers understand where to locate groundwater recharge projects in order to achieve multiple benefits, including environmental, ecosystem, community and economic benefits. 
+Claire Madden is a second year master's candidate at The Bren School of Environmental Science & Management specilizing in freshwater resource management and environmental data science. Currently, Claire's work focuses on sustainable groundwater management, particularly in the Central Valley of California in the context of the Sustainable Groundwater Management Act (2014). Claire has spent the last year working on building a decision support tool to help groundwater managers understand where to locate groundwater recharge projects in order to achieve multiple benefits, including environmental, ecosystem, community and economic benefits. 
 
 Other interests include surface/groundwater connections, integrated regional water management, and the role water markets can play in sustainable management of water resources. As a Sustainable Water Markets Fellow, Claire has been interested in the flexibility that water markets and water trading can provide water users and water rights holders, particularly in the face of scarcity. This interest has been contextualized by predictions of future water availability under climate change. 
